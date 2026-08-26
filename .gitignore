@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Java / Maven
+target/
+*.class
+
+# Answer key — never publish to the candidate repo
+INTERVIEWER_GUIDE.md
+
+# Editor / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
