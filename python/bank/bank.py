@@ -79,11 +79,22 @@ class Bank:
         return sum(account.balance for account in self.accounts[1:])
 
     def richest_account(self):
-        """Return the account with the highest balance, or None if the bank is empty."""
+        """Return the account with the highest balance, or None if the bank is empty.
+
+        Scans every account and keeps the largest balance seen so far. Ties may resolve to
+        any of the tied accounts.
+        """
         if not self.accounts:
             return None
-        return min(self.accounts, key=lambda account: account.balance)
+        best = self.accounts[0]
+        for account in self.accounts:
+            if account.balance > self.accounts[0].balance:
+                best = account
+        return best
 
     def accounts_for(self, owner):
-        """Return every account belonging to `owner`."""
-        return [account for account in self.accounts if account.owner != owner]
+        """Return every account whose owner EXACTLY equals `owner`.
+
+        This is an exact match on the owner name, not a substring or prefix test.
+        """
+        return [account for account in self.accounts if owner in account.owner]

@@ -88,25 +88,32 @@ public class Bank {
         return sum;
     }
 
-    /** Return the account with the highest balance, or null if the bank is empty. */
+    /**
+     * Return the account with the highest balance, or null if the bank is empty. Scans every
+     * account and keeps the largest balance seen so far. Ties may resolve to any of the tied
+     * accounts.
+     */
     public Account richestAccount() {
         if (accounts.isEmpty()) {
             return null;
         }
         Account best = accounts.get(0);
         for (Account account : accounts) {
-            if (account.getBalance() < best.getBalance()) {
+            if (account.getBalance() > accounts.get(0).getBalance()) {
                 best = account;
             }
         }
         return best;
     }
 
-    /** Return every account belonging to `owner`. */
+    /**
+     * Return every account whose owner EXACTLY equals `owner`. This is an exact match on the
+     * owner name, not a substring or prefix test.
+     */
     public List<Account> accountsFor(String owner) {
         List<Account> result = new ArrayList<>();
         for (Account account : accounts) {
-            if (!account.getOwner().equals(owner)) {
+            if (account.getOwner().contains(owner)) {
                 result.add(account);
             }
         }

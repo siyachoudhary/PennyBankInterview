@@ -12,13 +12,21 @@ import org.junit.jupiter.api.Test;
  * Behavioral tests for PennyBank. These describe the *intended* behavior.
  * Fix the source in Bank.java until they all pass — do not change the tests.
  *
- * There are 6 planted bugs: 4 easy to spot from a single failing test, and 2 subtler ones
- * that only bite on an edge case. Each assertion carries a message describing the intent.
+ * There are 6 planted bugs. None of them announce themselves with a crash or an obviously
+ * absurd value — every one is a plausible-looking implementation that quietly disagrees with
+ * the Javadoc. Read the method's Javadoc (it states the intended behavior), then read the
+ * code, and find the mismatch. Two waves:
+ *
+ *   - Wave 1: a careful read of the Javadoc is enough to spot the mismatch.
+ *   - Wave 2: the bug only bites on an edge case (an account that gets skipped, a transfer
+ *     that can't be covered, or a withdrawal that lands exactly on the balance).
+ *
+ * Each assertion carries a message describing the intent.
  */
 class BankTest {
 
     // -----------------------------------------------------------------------
-    // The 4 easier bugs
+    // Wave 1 — read the Javadoc carefully
     // -----------------------------------------------------------------------
 
     @Test
@@ -34,24 +42,37 @@ class BankTest {
 
     @Test
     void richestAccountHasHighestBalance() {
+        // With three accounts where the largest balance is NOT the last one opened, a scan
+        // that compares against the wrong reference will pick the wrong account.
         Bank bank = new Bank();
         bank.openAccount("Alice", 100);
-        bank.openAccount("Bob", 300);
+        bank.openAccount("Bob", 300);   // the true maximum
+        bank.openAccount("Carol", 200);
         assertEquals("Bob", bank.richestAccount().getOwner(),
-                "richestAccount() should return the HIGHEST-balance account (Bob at 300), not the lowest");
+                "richestAccount() should return the HIGHEST-balance account (Bob at 300); each account "
+                        + "must be compared against the best seen so far, not against the first account");
     }
 
     @Test
-    void accountsForReturnsOwnersAccounts() {
+    void accountsForMatchesOwnerExactly() {
+        // accounts_for matches the owner name EXACTLY, not as a substring: 'Al' must not also
+        // match 'Alice'.
         Bank bank = new Bank();
+        bank.openAccount("Al");
         bank.openAccount("Alice");
         bank.openAccount("Bob");
-        List<String> owners = bank.accountsFor("Alice").stream()
+        List<String> owners = bank.accountsFor("Al").stream()
                 .map(Account::getOwner)
+                .sorted()
                 .collect(Collectors.toList());
-        assertEquals(List.of("Alice"), owners,
-                "accountsFor('Alice') should return Alice's accounts, not everyone else's");
+        assertEquals(List.of("Al"), owners,
+                "accountsFor('Al') should return only the account owned by exactly 'Al'; 'Alice' merely "
+                        + "contains the substring 'Al' and must be excluded");
     }
+
+    // -----------------------------------------------------------------------
+    // Wave 2 — edge cases: a skipped account, an uncovered transfer, an exact withdrawal
+    // -----------------------------------------------------------------------
 
     @Test
     void totalAssetsSumsEveryAccount() {
@@ -60,12 +81,9 @@ class BankTest {
         bank.openAccount("Bob", 200);
         bank.openAccount("Carol", 50);
         assertEquals(350, bank.totalAssets(),
-                "totalAssets() should sum ALL balances (100 + 200 + 50 = 350); no account should be skipped");
+                "totalAssets() should sum ALL balances (100 + 200 + 50 = 350); no account should be "
+                        + "skipped (a total of 250 means the first account was dropped)");
     }
-
-    // -----------------------------------------------------------------------
-    // The 2 harder bugs (edge cases)
-    // -----------------------------------------------------------------------
 
     @Test
     void withdrawAllowsExactBalance() {
@@ -92,7 +110,7 @@ class BankTest {
     }
 
     // -----------------------------------------------------------------------
-    // Correct behavior (kept as clean reference points)
+    // Correct behavior (these pass out of the box — clean reference points)
     // -----------------------------------------------------------------------
 
     @Test
