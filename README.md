@@ -6,7 +6,7 @@ repo — **Python** and **Java** — so pick whichever language you're most comf
 
 The interview is really **one main task with an optional bonus**:
 
-1. **Debugging (the whole interview)** — The library ships with a failing test suite. Six
+1. **Debugging (the whole interview)** — The library ships with a failing test suite. Eight
    bugs have been planted. Find and fix them until the tests are green. None of them are
    one-liners that scream at you — they're the kind of plausible-looking code that quietly
    does the wrong thing, so take your time and reason carefully.
@@ -24,7 +24,8 @@ hypotheses, verify them, and communicate as you go. **Think out loud.**
 
 A tiny in-memory bank ledger. A `Bank` holds accounts, each with an owner and a balance.
 You can open accounts, deposit, withdraw (only when the funds are there), transfer money
-between accounts, look up balances, find the richest account, and total the bank's assets.
+between accounts, look up balances, find the richest account, total the bank's assets, close
+out low-balance accounts, and charge a flat fee across the board.
 
 The two implementations behave identically — same classes, same methods, same bugs.
 
@@ -69,16 +70,19 @@ mvn test                            # compiles and runs the tests
    method's docstring/Javadoc states what it should do — and fix the bugs.
 4. Re-run until everything is green.
 
-There are **six** planted bugs, and **none of them are loud** — there are no crashes or
+There are **eight** planted bugs, and **none of them are loud** — there are no crashes or
 wildly-wrong values to point the way. Each is a plausible implementation that quietly
 disagrees with the method's docstring: think a running-maximum that compares against the
 wrong reference, an exact-match that's secretly a substring test, an accumulator that skips
-an account, or a money move that isn't atomic. The **docstring on each method states what it
-is supposed to do** — the bug is always a mismatch between that description and the code.
+an account, a money move that isn't atomic, a bulk-close loop that mutates the list while it
+walks it, or a fee that forgets a balance can't go negative. The **docstring on each method
+states what it is supposed to do** — the bug is (almost) always a mismatch between that
+description and the code.
 
 The tests come in two waves: *Wave 1* is catchable from a careful read of the docstring;
-*Wave 2* only bites on an edge case (a skipped account, a transfer that can't be covered, or
-a withdrawal that lands exactly on the balance). Fix the source, **not** the tests.
+*Wave 2* only bites on an edge case (a skipped account, a transfer that can't be covered, a
+withdrawal that lands exactly on the balance, an adjacent pair dropped during a bulk close,
+or a fee larger than a small balance). Fix the source, **not** the tests.
 
 **As you work, tell us:** what does the failing test expect, what did you observe, what's
 your hypothesis, and how did the fix confirm it?
@@ -101,7 +105,8 @@ If we do have time: pick **one** feature below (or propose your own) and impleme
 - **Overdraft limit.** Allow an account to go negative down to a per-account limit, and
   enforce it in `withdraw`/`transfer`.
 - **Interest.** Add `apply_interest(rate)` that grows every balance by a rate.
-- **Close account.** Add `close_account(id)`, deciding what happens to a non-zero balance.
+- **Freeze account.** Add `freeze(id)` / `unfreeze(id)` and have `withdraw`/`transfer`
+  refuse to move money out of a frozen account.
 
 Walk us through your design choices, edge cases, and how you'd extend it further.
 

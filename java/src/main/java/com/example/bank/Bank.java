@@ -15,6 +15,10 @@ public class Bank {
     private final List<Account> accounts = new ArrayList<>();
     private int nextId = 1;
 
+    public List<Account> getAccounts() {
+        return accounts;
+    }
+
     /** Open a new account for `owner` with an optional starting balance, and return it. */
     public Account openAccount(String owner, int initial) {
         Account account = new Account(nextId, owner, initial);
@@ -118,5 +122,29 @@ public class Bank {
             }
         }
         return result;
+    }
+
+    /**
+     * Close (remove) every account whose balance is strictly below {@code minBalance}. An
+     * account sitting at exactly {@code minBalance} (or above) is kept — only the ones under
+     * the line are closed.
+     */
+    public void closeBelow(int minBalance) {
+        for (int i = 0; i < accounts.size(); i++) {
+            if (accounts.get(i).getBalance() < minBalance) {
+                accounts.remove(i);
+            }
+        }
+    }
+
+    /**
+     * Charge a flat {@code fee} to every account. An account whose balance is at least
+     * {@code fee} pays it (its balance drops by {@code fee}); an account that cannot cover
+     * the fee is left untouched — a balance must never go negative.
+     */
+    public void deductFeeAll(int fee) {
+        for (Account account : accounts) {
+            account.setBalance(account.getBalance() - fee);
+        }
     }
 }

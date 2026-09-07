@@ -3,14 +3,15 @@
 These describe the *intended* behavior. Fix the source in bank/bank.py until they all
 pass — do not change the tests.
 
-There are 6 planted bugs. None of them announce themselves with a crash or an obviously
+There are 8 planted bugs. None of them announce themselves with a crash or an obviously
 absurd value — every one is a plausible-looking implementation that quietly disagrees with
 the docstring. Read the method's docstring (it states the intended behavior), then read the
 code, and find the mismatch. Two waves:
 
   * Wave 1 — a careful read of the docstring is enough to spot the mismatch.
   * Wave 2 — the bug only bites on an edge case (an account that gets skipped, a transfer
-    that can't be covered, or a withdrawal that lands exactly on the balance).
+    that can't be covered, a withdrawal that lands exactly on the balance, an adjacent pair
+    dropped during a bulk close, or a fee that drives a small balance negative).
 
 Each assertion carries a message describing the intended behavior.
 """
@@ -104,6 +105,38 @@ def test_transfer_is_atomic_when_funds_are_short():
         "0, not 100)"
     )
     assert bank.balance(a.id) == 50, "a failed transfer must leave the source balance unchanged"
+
+
+def test_close_below_drops_every_low_account():
+    # close_below removes EVERY account under the cutoff, however many there are. NOTE: the
+    # order these are opened in is load-bearing — keep the two low-balance accounts adjacent.
+    bank = Bank()
+    bank.open_account("Alice", initial=5)    # under 10
+    bank.open_account("Bob", initial=8)      # under 10, right after Alice
+    bank.open_account("Carol", initial=100)  # safe
+    bank.close_below(10)
+    owners = sorted(a.owner for a in bank.accounts)
+    assert owners == ["Carol"], (
+        "close_below(10) should drop EVERY account under 10 (both Alice and Bob), leaving "
+        f"only Carol; got {owners}"
+    )
+
+
+def test_deduct_fee_leaves_accounts_that_cannot_cover_untouched():
+    # A flat fee is charged to everyone who can afford it. An account that cannot cover the
+    # fee is left alone — a balance must never go negative. An account sitting exactly at the
+    # fee pays it down to 0.
+    bank = Bank()
+    rich = bank.open_account("Alice", initial=100)
+    broke = bank.open_account("Bob", initial=5)     # cannot cover a fee of 10
+    exact = bank.open_account("Carol", initial=10)  # covers it exactly, down to 0
+    bank.deduct_fee_all(10)
+    assert bank.balance(rich.id) == 90, "an account that can cover the fee pays it (100 - 10 = 90)"
+    assert bank.balance(broke.id) == 5, (
+        "an account that cannot cover the fee must be left untouched (Bob stays at 5, never "
+        "goes negative to -5)"
+    )
+    assert bank.balance(exact.id) == 0, "an account with exactly the fee pays it down to 0"
 
 
 # ---------------------------------------------------------------------------

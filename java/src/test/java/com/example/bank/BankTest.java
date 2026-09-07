@@ -12,14 +12,15 @@ import org.junit.jupiter.api.Test;
  * Behavioral tests for PennyBank. These describe the *intended* behavior.
  * Fix the source in Bank.java until they all pass — do not change the tests.
  *
- * There are 6 planted bugs. None of them announce themselves with a crash or an obviously
+ * There are 8 planted bugs. None of them announce themselves with a crash or an obviously
  * absurd value — every one is a plausible-looking implementation that quietly disagrees with
  * the Javadoc. Read the method's Javadoc (it states the intended behavior), then read the
  * code, and find the mismatch. Two waves:
  *
  *   - Wave 1: a careful read of the Javadoc is enough to spot the mismatch.
  *   - Wave 2: the bug only bites on an edge case (an account that gets skipped, a transfer
- *     that can't be covered, or a withdrawal that lands exactly on the balance).
+ *     that can't be covered, a withdrawal that lands exactly on the balance, an adjacent pair
+ *     dropped during a bulk close, or a fee that drives a small balance negative).
  *
  * Each assertion carries a message describing the intent.
  */
@@ -107,6 +108,39 @@ class BankTest {
                 "when a transfer fails, the destination must NOT be credited (Bob stays 0, not 100)");
         assertEquals(50, bank.balance(a.getId()),
                 "a failed transfer must leave the source balance unchanged");
+    }
+
+    @Test
+    void closeBelowDropsEveryLowAccount() {
+        // close_below removes EVERY account under the cutoff. NOTE: the order these are
+        // opened in is load-bearing — keep the two low-balance accounts adjacent.
+        Bank bank = new Bank();
+        bank.openAccount("Alice", 5);    // under 10
+        bank.openAccount("Bob", 8);      // under 10, right after Alice
+        bank.openAccount("Carol", 100);  // safe
+        bank.closeBelow(10);
+        List<String> owners = bank.getAccounts().stream()
+                .map(Account::getOwner)
+                .sorted()
+                .collect(Collectors.toList());
+        assertEquals(List.of("Carol"), owners,
+                "closeBelow(10) should drop EVERY account under 10 (both Alice and Bob), leaving only Carol");
+    }
+
+    @Test
+    void deductFeeLeavesAccountsThatCannotCoverUntouched() {
+        // A flat fee is charged to everyone who can afford it. An account that cannot cover
+        // the fee is left alone — a balance must never go negative. An account sitting
+        // exactly at the fee pays it down to 0.
+        Bank bank = new Bank();
+        Account rich = bank.openAccount("Alice", 100);
+        Account broke = bank.openAccount("Bob", 5);     // cannot cover a fee of 10
+        Account exact = bank.openAccount("Carol", 10);  // covers it exactly, down to 0
+        bank.deductFeeAll(10);
+        assertEquals(90, bank.balance(rich.getId()), "an account that can cover the fee pays it (100 - 10 = 90)");
+        assertEquals(5, bank.balance(broke.getId()),
+                "an account that cannot cover the fee must be left untouched (Bob stays 5, never goes to -5)");
+        assertEquals(0, bank.balance(exact.getId()), "an account with exactly the fee pays it down to 0");
     }
 
     // -----------------------------------------------------------------------

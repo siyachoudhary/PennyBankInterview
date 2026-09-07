@@ -98,3 +98,23 @@ class Bank:
         This is an exact match on the owner name, not a substring or prefix test.
         """
         return [account for account in self.accounts if owner in account.owner]
+
+    def close_below(self, min_balance):
+        """Close (remove) every account whose balance is strictly below `min_balance`.
+
+        An account sitting at exactly `min_balance` (or above) is kept — only the ones
+        under the line are closed.
+        """
+        for account in self.accounts:
+            if account.balance < min_balance:
+                self.accounts.remove(account)
+
+    def deduct_fee_all(self, fee):
+        """Charge a flat `fee` to every account.
+
+        An account whose balance is at least `fee` pays it (its balance drops by `fee`). An
+        account that cannot cover the fee is left untouched — a balance must never go
+        negative.
+        """
+        for account in self.accounts:
+            account.balance -= fee
